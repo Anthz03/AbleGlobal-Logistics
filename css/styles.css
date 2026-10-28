@@ -255,25 +255,79 @@ html:not(.js) .preloader { display: none; }
 
 /* ---------- About ---------- */
 
-.about__grid { display: grid; grid-template-columns: 1.05fr 1fr; gap: clamp(40px, 7vw, 110px); align-items: center; }
-.about .h2 { margin-bottom: 28px; }
+.about__grid { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(40px, 7vw, 110px); align-items: end; }
+.about .h2 { max-width: 16ch; }
 .ticks { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; margin-top: 36px; }
 .ticks li { position: relative; padding-left: 30px; font-weight: 600; font-size: 15px; }
 .ticks li::before {
   content: ""; position: absolute; left: 0; top: 3px; width: 18px; height: 18px; border-radius: 50%;
   background: var(--red-soft) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3E%3Cpath d='m5.5 10.5 3 3 6-7' fill='none' stroke='%23ab1f25' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center/14px no-repeat;
 }
-.about__visual { position: relative; }
-.about__frame { position: relative; border-radius: 28px; overflow: hidden; aspect-ratio: 4 / 5; background: var(--paper-2); }
-.about__img { position: absolute; left: 0; top: -10%; width: 100%; height: 120%; object-fit: cover; object-position: 30% center; will-change: transform; }
 .about__badge {
-  position: absolute; left: -28px; bottom: 40px;
-  background: var(--red); color: #fff; padding: 22px 26px; border-radius: 20px;
-  display: flex; align-items: center; gap: 14px;
+  display: inline-flex; align-items: center; gap: 14px; margin-top: 36px;
+  background: var(--red); color: #fff; padding: 20px 24px; border-radius: 20px;
   box-shadow: 0 24px 50px -18px rgba(171,31,37,.6);
 }
-.about__badge strong { font-size: 48px; line-height: 1; font-weight: 800; letter-spacing: -.03em; }
+.about__badge strong { font-size: 44px; line-height: 1; font-weight: 800; letter-spacing: -.03em; }
 .about__badge span { font-size: 14px; line-height: 1.35; color: rgba(255,255,255,.85); }
+
+/* Video stage: a framed card by default; on desktop with motion it pins and expands to full screen */
+.about__stage { max-width: 1240px; margin: clamp(56px, 7vw, 100px) auto 0; padding-inline: var(--gutter); }
+.about__frame { position: relative; overflow: hidden; border-radius: 28px; aspect-ratio: 16 / 9; background: var(--ink); color: #fff; }
+.about__video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
+.about__shade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(21,23,28,0) 65%, rgba(21,23,28,.5) 100%); transition: opacity .6s var(--ease); }
+
+.about__play {
+  position: absolute; left: clamp(16px, 3vw, 40px); bottom: clamp(16px, 3vw, 40px);
+  display: inline-flex; align-items: center; gap: 14px; padding: 8px 22px 8px 8px; border: 0; border-radius: 999px; cursor: pointer;
+  font: inherit; font-weight: 700; font-size: 15px; color: var(--ink); background: #fff;
+  box-shadow: 0 20px 50px -15px rgba(0,0,0,.5);
+  transform-origin: left bottom;
+  transition: opacity .4s var(--ease), scale .4s var(--ease);
+}
+.about__play:hover { scale: 1.05; }
+.about__play-ring { position: relative; display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: var(--red); color: #fff; }
+.about__play-ring::after { content: ""; position: absolute; inset: 0; border-radius: 50%; animation: playPulse 2.2s var(--ease) infinite; }
+.about__play-ring svg { width: 22px; height: 22px; margin-left: 3px; }
+@keyframes playPulse { from { box-shadow: 0 0 0 0 rgba(255,255,255,.7); } to { box-shadow: 0 0 0 18px rgba(255,255,255,0); } }
+
+.about__controls {
+  position: absolute; right: clamp(16px, 3vw, 40px); bottom: clamp(16px, 3vw, 40px);
+  display: flex; align-items: center; gap: 6px; padding: 6px 14px 6px 6px; border-radius: 999px;
+  background: rgba(21,23,28,.55); backdrop-filter: blur(6px);
+  opacity: 0; transition: opacity .4s var(--ease);
+}
+.about__frame:hover .about__controls, .about__frame:focus-within .about__controls, .about__frame.is-paused .about__controls { opacity: 1; }
+@media (hover: none) { .about__controls { opacity: 1; } }
+.about__ctrl {
+  flex: none; width: 40px; height: 40px; border-radius: 50%; border: 0; cursor: pointer;
+  display: grid; place-items: center; color: #fff; background: transparent;
+  transition: background .2s ease;
+}
+.about__ctrl:hover { background: var(--red); }
+.about__ctrl:focus-visible, .about__play:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+.about__ctrl svg { width: 20px; height: 20px; }
+.about__ctrl .i-play, .about__ctrl .i-sound, .about__frame.is-paused .i-pause { display: none; }
+.about__frame.is-paused .i-play, .about__ctrl[aria-pressed="true"] .i-sound { display: inline; }
+.about__ctrl[aria-pressed="true"] .i-muted { display: none; }
+.about__volume { width: 90px; accent-color: var(--red); cursor: pointer; }
+.about__progress { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; background: rgba(255,255,255,.2); pointer-events: none; }
+.about__progress span { display: block; height: 100%; background: var(--red); transform-origin: left; transform: scaleX(0); }
+
+.about__lead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 40px; margin-top: clamp(80px, 10vw, 140px); }
+.about__lead .eyebrow { margin-bottom: 0; }
+.about__lead-title { font-size: clamp(22px, 2.6vw, 34px); line-height: 1.15; letter-spacing: -.02em; font-weight: 800; }
+.about__lead + .about__stage { margin-top: clamp(24px, 3vw, 40px); }
+
+/* Once the viewer chooses sound, step the overlay aside so the film takes over */
+.about__frame.has-sound .about__play { opacity: 0; visibility: hidden; transition: opacity .4s var(--ease), visibility 0s .4s; }
+.about__frame.has-sound .about__shade { opacity: 0; }
+
+/* Desktop: the heading holds in place until the copy beside it runs out */
+@media (min-width: 901px) {
+  .about__grid { align-items: start; }
+  .about__head { position: sticky; top: 140px; }
+}
 
 /* ---------- Mission ---------- */
 
@@ -535,8 +589,6 @@ html:not(.js) .mission__statement .word { opacity: 1; }
   .about__grid, .contact__grid, .section-head { grid-template-columns: 1fr; }
   .section-head { gap: 20px; }
   .section-head__aside { justify-self: start; }
-  .about__visual { max-width: 520px; }
-  .about__badge { left: 16px; bottom: 16px; }
   .assets { grid-template-columns: 1fr 1fr; }
   .accred__grid { grid-template-columns: 1fr 1fr; }
   .stats { grid-template-columns: repeat(2, 1fr); }
@@ -545,6 +597,9 @@ html:not(.js) .mission__statement .word { opacity: 1; }
 }
 
 @media (max-width: 640px) {
+  .about__frame { border-radius: 20px; }
+  .about__play { padding: 6px; }
+  .about__play-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .hero__content { padding-top: 110px; padding-bottom: 130px; }
   .hero__actions .btn { flex: 1 1 100%; }
   .strip__item { padding: 20px 14px; }

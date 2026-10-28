@@ -22,6 +22,15 @@
 
   document.querySelectorAll("[data-year]").forEach((el) => (el.textContent = new Date().getFullYear()));
 
+  /* ---------- Always start at the top on load / refresh ---------- */
+
+  if ("scrollRestoration" in history) history.scrollRestoration = "manual";
+  if (location.hash) history.replaceState(null, "", location.pathname + location.search);
+  // ScrollTrigger keeps its own scroll memory and would restore the old position after refresh
+  if (hasGsap) ScrollTrigger.clearScrollMemory("manual");
+  window.scrollTo(0, 0);
+  window.addEventListener("load", () => window.scrollTo(0, 0), { once: true });
+
   /* ---------- Smooth scroll ---------- */
 
   let lenis = null;
@@ -99,8 +108,10 @@
   /* ---------- Partner marquee: repeat logos so the loop is seamless ---------- */
 
   if (!reduceMotion) {
-    $$(".marquee__track").forEach((track) => {
+    $$(".marquee__track").forEach(async (track) => {
       const originals = [...track.children];
+      // Measure only once the logos have real widths, otherwise the track over-fills and jumps when they arrive
+      await Promise.all(originals.map((img) => (img.complete ? null : new Promise((r) => img.addEventListener("load", r, { once: true }) || img.addEventListener("error", r, { once: true })))));
       const fill = () => track.scrollWidth < window.innerWidth * 1.2;
       while (fill()) originals.forEach((n) => track.appendChild(n.cloneNode(true)));
       // Duplicate the whole set once more so translateX(-50%) lands on an identical frame
@@ -111,6 +122,82 @@
         track.appendChild(c);
       });
     });
+  }
+
+  /* ---------- About video: muted preview while in view, full playback on request ---------- */
+
+  const aboutVideo = $("[data-about-video]");
+  if (aboutVideo) {
+    const frame = $("[data-about-frame]");
+    const playBtn = $("[data-about-play]");
+    const playLabel = $("[data-about-play-label]");
+    const toggleBtn = $("[data-about-toggle]");
+    const soundBtn = $("[data-about-sound]");
+    const volume = $("[data-about-volume]");
+    const progress = $("[data-about-progress]");
+    let userPaused = reduceMotion; // reduced motion: wait for the viewer to press play
+
+    aboutVideo.volume = Number(volume.value); // the track is mastered loud; start well below full
+
+    const syncSound = () => {
+      const on = !aboutVideo.muted && aboutVideo.volume > 0;
+      frame.classList.toggle("has-sound", on);
+      soundBtn.setAttribute("aria-pressed", String(on));
+      soundBtn.setAttribute("aria-label", on ? "Turn sound off" : "Turn sound on");
+      volume.value = aboutVideo.muted ? 0 : aboutVideo.volume;
+    };
+    const setSound = (on) => {
+      if (on && aboutVideo.volume === 0) aboutVideo.volume = 0.4;
+      aboutVideo.muted = !on;
+    };
+    // Autoplay can be refused (Low Power Mode, browser settings); fall back to an obvious play button
+    const play = () =>
+      aboutVideo.play().catch(() => {
+        if (aboutVideo.muted) playLabel.textContent = "Play video";
+      });
+
+    aboutVideo.addEventListener("volumechange", syncSound);
+    aboutVideo.addEventListener("play", () => {
+      frame.classList.remove("is-paused");
+      toggleBtn.setAttribute("aria-label", "Pause video");
+    });
+    aboutVideo.addEventListener("pause", () => {
+      frame.classList.add("is-paused");
+      toggleBtn.setAttribute("aria-label", "Play video");
+    });
+    aboutVideo.addEventListener("timeupdate", () => {
+      if (aboutVideo.duration) progress.style.transform = `scaleX(${aboutVideo.currentTime / aboutVideo.duration})`;
+    });
+    if (reduceMotion) playLabel.textContent = "Play video";
+    frame.classList.add("is-paused");
+    syncSound();
+
+    playBtn.addEventListener("click", () => {
+      userPaused = false;
+      aboutVideo.currentTime = 0;
+      setSound(true);
+      play();
+    });
+    const togglePlay = () => {
+      userPaused = !aboutVideo.paused;
+      if (userPaused) aboutVideo.pause();
+      else play();
+    };
+    toggleBtn.addEventListener("click", togglePlay);
+    aboutVideo.addEventListener("click", togglePlay);
+    soundBtn.addEventListener("click", () => setSound(aboutVideo.muted));
+    volume.addEventListener("input", () => {
+      const level = Number(volume.value);
+      if (level > 0) aboutVideo.volume = level;
+      aboutVideo.muted = level === 0;
+    });
+
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(([entry]) => {
+        if (!entry.isIntersecting) aboutVideo.pause();
+        else if (!userPaused) play();
+      }, { threshold: 0.25 }).observe(frame);
+    }
   }
 
   /* ---------- Contact form (front-end only) ---------- */
@@ -261,13 +348,6 @@
         scrollTrigger: { trigger: img.closest("section"), start: "top bottom", end: "bottom top", scrub: true },
       }
     );
-  });
-
-  // About badge floats slightly faster than the image for depth
-  gsap.to(".about__badge", {
-    y: -60,
-    ease: "none",
-    scrollTrigger: { trigger: ".about__visual", start: "top bottom", end: "bottom top", scrub: true },
   });
 
   /* ---------- Mission words ---------- */
